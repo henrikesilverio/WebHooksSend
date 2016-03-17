@@ -1,0 +1,260 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="container margin-top">
+    <table id="example" class="table table-striped table-bordered" cellspacing="0" width="100%"></table>
+    <footer>
+        <button type="button" id="Incluir" class="btn btn-primary btn-lg">Novo cliente</button>
+    </footer>
+</div>
+
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="myModalLabel">Novo cliente</h4>
+            </div>
+            <div class="modal-body ">
+                <form id="FormularioIncluir" class="form-horizontal">
+                    <div class="form-group">
+                        <label class="col-md-2 control-label" for="Nome">Nome</label>
+                        <div class="col-md-10">
+                            <input class="form-control" id="Nome" name="Nome" type="text" value="">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-2 control-label" for="Sobrenome">Sobrenome</label>
+                        <div class="col-md-10">
+                            <input class="form-control" id="Sobrenome" name="Sobrenome" type="text" value="">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-2 control-label" for="CPF">CPF</label>
+                        <div class="col-md-10">
+                            <input class="form-control" id="CPF" name="CPF" type="text" value="">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="Fechar" class="btn btn-lg btn-default" data-dismiss="modal">Fechar</button>
+                <button type="button" id="Salvar" class="btn btn-lg btn-primary">Salvar</button>
+                <button type="button" id="Atualizar" class="btn btn-lg btn-primary">Atualizar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    
+    $("#CPF").mask("000.000.000-00");
+    var tabela = $("#example").dataTable({
+        "sDom": "<'dt-wrapper't><'dt-row dt-bottom-row'<'col-sm-6'i><'col-sm-6 text-right'p>>",
+        "autoWidth": true,
+        "iDisplayLength": 10,
+        "aaData": [],
+        "aoColumns": [
+            { "sTitle": "ID", "mData": "Id", "sWidth": "10%" },
+            { "sTitle": "Nome", "mData": "Nome", "sWidth": "30%" },
+            { "sTitle": "Sobrenome", "mData": "Sobrenome", "sWidth": "35%" },
+            { "sTitle": "CPF", "mData": "CPF", "sWidth": "15%" },
+            {
+                "sTitle": "Ações",
+                "mData": null,
+                "sWidth": "10%",
+                "bSortable": false,
+                "mRender": function (obj) {
+                    var settings = JSON.stringify({
+                        "id": obj.Id,
+                        "urlEditar": "/api/Cliente/EditarCliente",
+                        "urlExcluir": "/api/Cliente/ExcluirCliente",
+                        "seletorTabela": "#datatableProduto",
+                        "seletorBotaoModalAtualizar": "#Atualizar",
+                        "seletorFormulario": "#FormularioIncluir",
+                        "seletorModal": "#myModal"
+                    });
+                    var botoes = criarBotoesTabelaDinamica(
+                        "editarItemTabelaDinamica(this, " + settings + ")",
+                        "excluirItemTabelaDinamica(this, " + settings + ")",
+                        "#myModal");
+                    return botoes[0].outerHTML;
+                }
+            }
+        ],
+        "aaSorting": [],
+        "oLanguage": {
+            "sInfo": "_START_ a _END_ em _TOTAL_ " + "Clientes",
+            "sInfoEmpty": "",
+            "sEmptyTable": "Clique em novo para incluir novos clientes",
+            "sInfoFiltered": "",
+            "sZeroRecords": "Não há registros para o filtro informado",
+            "oPaginate": {
+                "sFirst": "<<",
+                "sLast": ">>",
+                "sPrevious": "<",
+                "sNext": ">"
+            }
+        }
+    });
+
+    $("#Incluir").on("click", function () {
+        $("#CPF").removeAttr("disabled");
+        $("#FormularioIncluir input").each(function() {
+            $(this).val("");
+        });
+        $("#Atualizar").hide();
+        $("#Salvar").show();
+        $("#myModal").modal("show");
+    });
+
+    $("#Salvar").off("click").on("click", function () {
+        if ($("#Nome").val() !== "" && $("#Sobrenome").val() !== "" && $("#CPF").val() !== "") {
+            var obj = { "Nome": $("#Nome").val(), "Sobrenome": $("#Sobrenome").val(), "CPF": $("#CPF").val() };
+            $.ajax({
+                url: "/api/Cliente/CriarCliente",
+                data: obj,
+                type: "POST",
+                traditional: true
+            }).success(function (data) {
+                tabela.fnAddData([data]);
+                $("#myModal").modal("hide");
+            }).error(function (ex) {
+                alert(ex.responseJSON.Message);
+            });
+        }
+    });
+
+    function criarBotoesTabelaDinamica(funcaoEditar, funcaoExcluir, seletorModal) {
+        var div = $("<div>").attr({
+            "class": "editable-buttons"
+        });
+        var botaoEditar = $("<a>").attr({
+            "class": "btn btn-success btn-sm",
+            "title": "Editar",
+            "onclick": funcaoEditar,
+            "data-toggle": "modal",
+            "data-target": seletorModal
+        }).append($("<i>").attr({
+            "class": "glyphicon glyphicon-pencil"
+        }));
+
+        var botaoExcluir = $("<a>").attr({
+            "class": "btn btn-danger btn-sm BotaoExcluir",
+            "title": "Excluir",
+            "onclick": funcaoExcluir
+        }).append($("<i>").attr({
+            "class": "glyphicon glyphicon-trash"
+        }));
+
+        div.append(botaoEditar);
+        div.append(botaoExcluir);
+        return div;
+    }
+
+    function preencherCamposModal(obj) {
+        $("#Nome").val(obj["Nome"]);
+        $("#Sobrenome").val(obj["Sobrenome"]);
+        $("#CPF").val(obj["CPF"]).attr("disabled", "disabled");
+    }
+
+    function editarItemTabelaDinamica(tdCorrete, settings) {
+        var $tr = $(tdCorrete).closest("tr");
+        var obj = tabela.fnGetData($tr);
+        preencherCamposModal.call(this, obj);
+        $("#Salvar").hide();
+        $("#Atualizar").show();
+        $(settings.seletorBotaoModalAtualizar).off("click").on("click", function () {
+            var $formulario = $(settings.seletorFormulario);
+            var formularioDados = $formulario.serializeArray();
+            if ($("#Nome").val() !== "" && $("#Sobrenome").val() !== "" && $("#CPF").val() !== "") {
+                formularioDados.push({ "name": "Id", "value": settings.id });
+                formularioDados.push({ "name": "CPF", "value": $("#CPF").val() });
+                $.ajax({
+                    url: settings.urlEditar,
+                    data: formularioDados,
+                    type: "PUT",
+                    traditional: true
+                }).success(function (data) {
+                    tabela.fnUpdate(data, $tr);
+                    $("#Atualizar").hide();
+                    $("#Fechar").click();
+                    $(".modal-backdrop.fade.in").remove();
+                }).error(function (ex) {
+                    alert(ex.responseJSON.Message);
+                });
+            }
+        });
+    }
+
+    function excluirItemTabelaDinamica(tdCorrete, settings) {
+        $.ajax({
+            url: settings.urlExcluir,
+            data: {"Id": settings.id},
+            type: "DELETE"
+        }).success(function () {
+            tabela.fnDeleteRow($(tdCorrete).closest("tr"));
+        }).error(function (ex) {
+            alert(ex.responseJSON.Message);
+        });
+    }
+
+    $.ajax({
+        url: "/api/Cliente/ConsultaClientes",
+        type: "GET",
+        traditional: true
+    }).success(function (data) {
+        if (data.length) {
+            tabela.fnAddData(data);
+        }
+    }).error(function (ex) {
+        alert(ex.statusText);
+    });
+
+    function subscribe() {
+        $.ajax({
+            type: "POST",
+            url: "/api/webhooks/registrations",
+            data: JSON.stringify({
+                WebHookUri: "http://localhost:53890/api/webhooks/incoming/custom",
+                Secret: "12345678901234567890123456789012",
+                Description: "My first WebHook!",
+                Filters: ["event1"]
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data, status) {
+                alert(data.Message ? data.Message : status);
+            },
+            error: function (errMsg) {
+                alert(errMsg.responseJSON.Message);
+            }
+        });
+        return false;
+    }
+
+    function unsubscribe() {
+        $.ajax({
+            url: "/api/webhooks/registrations",
+            type: 'DELETE',
+            success: function (data, status) { alert(data.Message ? data.Message : status); },
+            error: function (errMsg) { alert(errMsg.responseJSON.Message); }
+        });
+        return false;
+    }
+
+    function notifymvc() {
+        $.post("/notify/submit",
+            {},
+            function (data, status) { alert("Data: " + data + "\nStatus: " + status); });
+        return false;
+    }
+
+    function notifyapi() {
+        $.post("/api/notifyapi",
+            {},
+            function (data, status) { alert("Data: " + data + "\nStatus: " + status); });
+        return false;
+    }
+</script>
